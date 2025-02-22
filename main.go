@@ -24,6 +24,15 @@ type Game struct {
 	Developer   string    `json:"developer"`
 }
 
+type Review struct {
+	ID          int       `json:"id"`
+	GameID      int       `json:"gameID"`
+	UserID      int       `json:"userID"`
+	Rating      int       `json:"rating"`
+	ReviewText  string    `json:"reviewText"`
+	DateCreated time.Time `json:"dateCreated"`
+}
+
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "This is the root web page")
 }
@@ -70,12 +79,39 @@ func getGamesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func getReviewsHandler(w http.ResponseWriter, r *http.Request) {
+	reviews := []Review{
+		{
+			ID:          1,
+			GameID:      1,
+			UserID:      1,
+			Rating:      5,
+			ReviewText:  "Great game!",
+			DateCreated: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			ID:          2,
+			GameID:      1,
+			UserID:      2,
+			Rating:      4,
+			ReviewText:  "Good game",
+			DateCreated: time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC),
+		},
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(reviews); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
 func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", indexHandler)
 	mux.HandleFunc("/hello", helloHandler)
 	mux.HandleFunc("GET /users", getUsersHandler)
 	mux.HandleFunc("GET /games", getGamesHandler)
+	mux.HandleFunc("GET /reviews", getReviewsHandler)
 
 	// Run the server
 	fmt.Println("Server is running on port 8080")
