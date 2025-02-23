@@ -11,8 +11,8 @@ type UserHandler struct {}
 
 func (uh *UserHandler) GetUsers(w http.ResponseWriter, r *http.Request) {
 	users := []domain.User{
-		{1, "john123", "john123@gmail.com", "passwordhash123"},
-		{2, "jane45", "jane456@gmail.com", "passwordhash456"},
+		{1, "john.doe", "john123@gmail.com", "passwordhash123"},
+		{2, "jane.doe", "jane456@gmail.com", "passwordhash456"},
 	}
 
 	w.Header().Set("Content-Type", "application/json")
