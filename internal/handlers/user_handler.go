@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/arvinsim/game-reviews-api/internal/domain"
@@ -25,10 +26,15 @@ func (uh *UserHandler) GetUsers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (uh *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
-	var newUser domain.User
-	if err := json.NewDecoder(r.Body).Decode(&newUser); err != nil {
+	if err := r.ParseForm(); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
+	}
+
+	newUser := domain.User{
+		Username:     r.FormValue("username"),
+		Email:        r.FormValue("email"),
+		PasswordHash: r.FormValue("password_hash"),
 	}
 
 	// Here you would typically add code to save the new user to a database
@@ -38,6 +44,7 @@ func (uh *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	_, err := userService.CreateUser(context.Background(), &newUser)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		fmt.Println("Create User failed 1, error: ", err)
 		return
 	}
 
@@ -45,5 +52,6 @@ func (uh *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	if err := json.NewEncoder(w).Encode(newUser); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		fmt.Println("Create User failed 2, error: ", err)
 	}
 }
