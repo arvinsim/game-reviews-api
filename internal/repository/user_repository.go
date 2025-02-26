@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 
 	"github.com/arvinsim/game-reviews-api/internal/domain"
@@ -26,13 +25,45 @@ func NewUserRepository(db *sql.DB) UserRepository {
 }
 
 func (r *userRepository) CreateUser(ctx context.Context, user *domain.User) error {
+	// prettyJSON, err := json.MarshalIndent(user, "", "    ")
+	// if err != nil {
+	// 	fmt.Println("Failed to generate json", err)
+	// 	return err
+	// }
+	// fmt.Println(string(prettyJSON))
+
 	// implement DB or in-memory logic
-	prettyJSON, err := json.MarshalIndent(user, "", "    ")
+	db, err := sql.Open("sqlite3", "../../data/game-reviews.db")
 	if err != nil {
-		fmt.Println("Failed to generate json", err)
-		return err
+		return fmt.Errorf("failed to open database: %v", err)
 	}
-	fmt.Println(string(prettyJSON))
+	defer db.Close()
+
+	_, err = db.ExecContext(ctx, `
+		CREATE TABLE IF NOT EXISTS users (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			username TEXT NOT NULL UNIQUE,
+			email TEXT NOT NULL UNIQUE,
+			password_hash TEXT NOT NULL
+		)
+	`)
+	if err != nil {
+		return fmt.Errorf("failed to create users table: %v", err)
+	}
+
+	result, err := db.ExecContext(ctx, `
+		INSERT INTO users (username, email, password_hash)
+		VALUES (?, ?, ?)
+	`, user.Username, user.Email, user.PasswordHash)
+	if err != nil {
+		return fmt.Errorf("failed to insert user: %v", err)
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return fmt.Errorf("failed to get last insert id: %v", err)
+	}
+	user.ID = id
 
 	return nil
 }
