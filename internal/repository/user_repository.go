@@ -8,10 +8,11 @@ import (
 	"github.com/arvinsim/game-reviews-api/internal/domain"
 
 	_ "github.com/mattn/go-sqlite3"
+	"golang.org/x/crypto/argon2"
 )
 
 type UserRepository interface {
-	CreateUser(ctx context.Context, user *domain.User) error
+	CreateUser(ctx context.Context, user *domain.User) (*domain.User, error)
 	GetUserByID(ctx context.Context, userID int64) (*domain.User, error)
 	GetAllUsers(ctx context.Context) ([]*domain.User, error)
 }
@@ -24,18 +25,11 @@ func NewUserRepository(db *sql.DB) UserRepository {
 	return &userRepository{db: db}
 }
 
-func (r *userRepository) CreateUser(ctx context.Context, user *domain.User) error {
-	// prettyJSON, err := json.MarshalIndent(user, "", "    ")
-	// if err != nil {
-	// 	fmt.Println("Failed to generate json", err)
-	// 	return err
-	// }
-	// fmt.Println(string(prettyJSON))
-
+func (r *userRepository) CreateUser(ctx context.Context, user *domain.User) (*domain.User, error) {
 	// implement DB or in-memory logic
 	db, err := sql.Open("sqlite3", "../../data/game-reviews.db")
 	if err != nil {
-		return fmt.Errorf("failed to open database: %v", err)
+		return nil, fmt.Errorf("failed to open database: %v", err)
 	}
 	defer db.Close()
 
@@ -48,24 +42,28 @@ func (r *userRepository) CreateUser(ctx context.Context, user *domain.User) erro
 		)
 	`)
 	if err != nil {
-		return fmt.Errorf("failed to create users table: %v", err)
+		return nil, fmt.Errorf("failed to create users table: %v", err)
 	}
+
+	// Hash the password using Argon2id
+	hashedPassword := argon2.IDKey([]byte(user.PasswordHash), []byte("somesalt"), 1, 64*1024, 4, 32)
+	user.PasswordHash = fmt.Sprintf("%x", hashedPassword)
 
 	result, err := db.ExecContext(ctx, `
 		INSERT INTO users (username, email, password_hash)
 		VALUES (?, ?, ?)
 	`, user.Username, user.Email, user.PasswordHash)
 	if err != nil {
-		return fmt.Errorf("failed to insert user: %v", err)
+		return nil, fmt.Errorf("failed to insert user: %v", err)
 	}
 
 	id, err := result.LastInsertId()
 	if err != nil {
-		return fmt.Errorf("failed to get last insert id: %v", err)
+		return nil, fmt.Errorf("failed to get last insert id: %v", err)
 	}
 	user.ID = id
 
-	return nil
+	return user, nil
 }
 
 func (r *userRepository) GetUserByID(ctx context.Context, userID int64) (*domain.User, error) {

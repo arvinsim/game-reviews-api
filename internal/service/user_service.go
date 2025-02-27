@@ -22,7 +22,7 @@ func NewUserService(userRepo repository.UserRepository) UserService {
 }
 
 func (us *userService) CreateUser(ctx context.Context, user *domain.User) (*domain.User, error) {
-	err := us.userRepo.CreateUser(ctx, user)
+	_, err := us.userRepo.CreateUser(ctx, user)
 	if err != nil {
 		return nil, err
 	}
