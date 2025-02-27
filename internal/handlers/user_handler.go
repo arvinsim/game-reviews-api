@@ -14,9 +14,13 @@ import (
 type UserHandler struct{}
 
 func (uh *UserHandler) GetUsers(w http.ResponseWriter, r *http.Request) {
-	users := []domain.User{
-		{ID: 1, Username: "john.doe", Email: "john123@gmail.com", PasswordHash: "passwordhash123"},
-		{ID: 2, Username: "jane.doe", Email: "jane456@gmail.com", PasswordHash: "passwordhash456"},
+	userRepo := repository.NewUserRepository() // Assuming you have a NewUserRepository function
+	userService := service.NewUserService(userRepo)
+	users, err := userService.GetAllUsers(context.Background())
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
