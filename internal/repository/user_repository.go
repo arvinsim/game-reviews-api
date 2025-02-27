@@ -18,10 +18,11 @@ type UserRepository interface {
 }
 
 type userRepository struct {
+	db *sql.DB
 }
 
-func NewUserRepository() UserRepository {
-	return &userRepository{}
+func NewUserRepository(db *sql.DB) UserRepository {
+	return &userRepository{db: db}
 }
 
 func (r *userRepository) CreateUser(ctx context.Context, user *domain.User) error {
@@ -46,13 +47,7 @@ func (r *userRepository) GetUserByID(ctx context.Context, userID int64) (*domain
 }
 
 func (r *userRepository) GetAllUsers(ctx context.Context) ([]*domain.User, error) {
-	db, err := sql.Open("sqlite3", "../../data/game-reviews.db")
-	if err != nil {
-		return nil, fmt.Errorf("failed to open database: %w", err)
-	}
-	defer db.Close()
-
-	rows, err := db.QueryContext(ctx, "SELECT id, username, email, password_hash FROM users")
+	rows, err := r.db.QueryContext(ctx, "SELECT id, username, email, password_hash FROM users")
 	if err != nil {
 		return nil, fmt.Errorf("failed to query users: %w", err)
 	}
