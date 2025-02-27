@@ -27,3 +27,5 @@ go.work.sum
 # IDE
 .vscode
 .idea
+
+data
