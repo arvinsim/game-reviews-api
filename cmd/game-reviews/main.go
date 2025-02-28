@@ -5,14 +5,26 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/arvinsim/game-reviews-api/internal/handlers"
 	"github.com/arvinsim/game-reviews-api/internal/repository"
 	"github.com/arvinsim/game-reviews-api/internal/service"
+	"github.com/joho/godotenv"
 )
 
 func main() {
-	db, err := sql.Open("sqlite3", "../../data/game-reviews.db")
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalf("Error loading .env file")
+	}
+
+	dbPath := os.Getenv("SQLITE_DB_PATH")
+	if dbPath == "" {
+		log.Fatalf("SQLITE_DB_PATH is required")
+	}
+
+	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		log.Fatalf("Failed to open database: %v", err)
 	}
