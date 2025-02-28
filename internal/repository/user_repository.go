@@ -3,16 +3,16 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 
 	"github.com/arvinsim/game-reviews-api/internal/domain"
 
 	_ "github.com/mattn/go-sqlite3"
+	"golang.org/x/crypto/argon2"
 )
 
 type UserRepository interface {
-	CreateUser(ctx context.Context, user *domain.User) error
+	CreateUser(ctx context.Context, user *domain.User) (*domain.User, error)
 	GetUserByID(ctx context.Context, userID int64) (*domain.User, error)
 	GetAllUsers(ctx context.Context) ([]*domain.User, error)
 }
@@ -25,16 +25,45 @@ func NewUserRepository(db *sql.DB) UserRepository {
 	return &userRepository{db: db}
 }
 
-func (r *userRepository) CreateUser(ctx context.Context, user *domain.User) error {
+func (r *userRepository) CreateUser(ctx context.Context, user *domain.User) (*domain.User, error) {
 	// implement DB or in-memory logic
-	prettyJSON, err := json.MarshalIndent(user, "", "    ")
+	db, err := sql.Open("sqlite3", "../../data/game-reviews.db")
 	if err != nil {
-		fmt.Println("Failed to generate json", err)
-		return err
+		return nil, fmt.Errorf("failed to open database: %v", err)
 	}
-	fmt.Println(string(prettyJSON))
+	defer db.Close()
 
-	return nil
+	_, err = db.ExecContext(ctx, `
+		CREATE TABLE IF NOT EXISTS users (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			username TEXT NOT NULL UNIQUE,
+			email TEXT NOT NULL UNIQUE,
+			password_hash TEXT NOT NULL
+		)
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create users table: %v", err)
+	}
+
+	// Hash the password using Argon2id
+	hashedPassword := argon2.IDKey([]byte(user.PasswordHash), []byte("somesalt"), 1, 64*1024, 4, 32)
+	user.PasswordHash = fmt.Sprintf("%x", hashedPassword)
+
+	result, err := db.ExecContext(ctx, `
+		INSERT INTO users (username, email, password_hash)
+		VALUES (?, ?, ?)
+	`, user.Username, user.Email, user.PasswordHash)
+	if err != nil {
+		return nil, fmt.Errorf("failed to insert user: %v", err)
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get last insert id: %v", err)
+	}
+	user.ID = id
+
+	return user, nil
 }
 
 func (r *userRepository) GetUserByID(ctx context.Context, userID int64) (*domain.User, error) {
