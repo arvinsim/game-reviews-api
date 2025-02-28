@@ -31,8 +31,10 @@ func (uh *userHandler) GetUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	userResponses := convertToUserResponses(users)
+
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(users); err != nil {
+	if err := json.NewEncoder(w).Encode(userResponses); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -64,4 +66,12 @@ func (uh *userHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		fmt.Println("Create User failed 2, error: ", err)
 	}
+}
+
+func convertToUserResponses(users []*domain.User) []domain.UserResponse {
+	userResponses := make([]domain.UserResponse, len(users))
+	for i, user := range users {
+		userResponses[i] = user.ConvertToUserResponse()
+	}
+	return userResponses
 }
