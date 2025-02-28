@@ -7,25 +7,39 @@ import (
 	"net/http"
 
 	"github.com/arvinsim/game-reviews-api/internal/domain"
-	"github.com/arvinsim/game-reviews-api/internal/repository"
 	"github.com/arvinsim/game-reviews-api/internal/service"
 )
 
-type UserHandler struct{}
+type UserHandler interface {
+	GetUsers(w http.ResponseWriter, r *http.Request)
+	CreateUser(w http.ResponseWriter, r *http.Request)
+}
 
-func (uh *UserHandler) GetUsers(w http.ResponseWriter, r *http.Request) {
-	users := []domain.User{
-		{ID: 1, Username: "john.doe", Email: "john123@gmail.com", PasswordHash: "passwordhash123"},
-		{ID: 2, Username: "jane.doe", Email: "jane456@gmail.com", PasswordHash: "passwordhash456"},
+type userHandler struct {
+	service service.UserService
+}
+
+func NewUserHandler(service service.UserService) UserHandler {
+	return &userHandler{service: service}
+}
+
+func (uh *userHandler) GetUsers(w http.ResponseWriter, r *http.Request) {
+	users, err := uh.service.GetAllUsers(context.Background())
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
+	userResponses := convertToUserResponses(users)
+
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(users); err != nil {
+	if err := json.NewEncoder(w).Encode(userResponses); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
-func (uh *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
+func (uh *userHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -39,9 +53,7 @@ func (uh *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 
 	// Here you would typically add code to save the new user to a database
 	// For now, we'll just return the user as a confirmation
-	userRepo := repository.NewUserRepository() // Assuming you have a NewUserRepository function
-	userService := service.NewUserService(userRepo)
-	_, err := userService.CreateUser(context.Background(), &newUser)
+	_, err := uh.service.CreateUser(context.Background(), &newUser)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		fmt.Println("Create User failed 1, error: ", err)
@@ -54,4 +66,12 @@ func (uh *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		fmt.Println("Create User failed 2, error: ", err)
 	}
+}
+
+func convertToUserResponses(users []*domain.User) []domain.UserResponse {
+	userResponses := make([]domain.UserResponse, len(users))
+	for i, user := range users {
+		userResponses[i] = user.ConvertToUserResponse()
+	}
+	return userResponses
 }

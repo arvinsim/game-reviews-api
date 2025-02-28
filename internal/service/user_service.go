@@ -34,6 +34,5 @@ func (us *userService) GetUser(ctx context.Context, userID int64) (*domain.User,
 }
 
 func (us *userService) GetAllUsers(ctx context.Context) ([]*domain.User, error) {
-	// TODO: Implement
-	return []*domain.User{}, nil
+	return us.userRepo.GetAllUsers(ctx)
 }
