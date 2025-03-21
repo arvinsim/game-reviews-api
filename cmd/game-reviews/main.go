@@ -12,6 +12,7 @@ import (
 	"github.com/arvinsim/game-reviews-api/internal/service"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/joho/godotenv"
+	"github.com/rs/cors"
 )
 
 func main() {
@@ -39,7 +40,8 @@ func main() {
 	gameHandler := &handlers.GameHandler{}
 	reviewHandler := &handlers.ReviewHandler{}
 
-	mux.HandleFunc("GET /users", corsMiddleware(userHandler.GetUsers))
+	mux.HandleFunc("GET /users", userHandler.GetUsers)
+	mux.HandleFunc("PUT /users", userHandler.GetUsers)
 	mux.HandleFunc("POST /users", userHandler.CreateUser)
 	mux.HandleFunc("GET /games", gameHandler.GetGames)
 	mux.HandleFunc("GET /reviews", reviewHandler.GetReviews)
@@ -49,6 +51,8 @@ func main() {
 }
 
 func runServer(port int, mux *http.ServeMux) {
+	handler := cors.Default().Handler(mux)
+
 	// Run the server
 	message := lipgloss.NewStyle().
 		Bold(true).
@@ -58,22 +62,7 @@ func runServer(port int, mux *http.ServeMux) {
 
 	fmt.Printf(message.Render("Server is running on port: %d"), port)
 
-	if err := http.ListenAndServe(fmt.Sprintf(":%d", port), mux); err != nil {
+	if err := http.ListenAndServe(fmt.Sprintf(":%d", port), handler); err != nil {
 		log.Fatalf("Server failed to start: %v", err)
-	}
-}
-
-func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-
-		next(w, r)
 	}
 }

@@ -40,15 +40,22 @@ func (uh *userHandler) GetUsers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (uh *userHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+	var newUserRequest struct {
+		Username string `json:"username"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
 	}
 
+	if err := json.NewDecoder(r.Body).Decode(&newUserRequest); err != nil {
+		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
 	newUser := domain.User{
-		Username:     r.FormValue("username"),
-		Email:        r.FormValue("email"),
-		PasswordHash: r.FormValue("password_hash"),
+		Username:     newUserRequest.Username,
+		Email:        newUserRequest.Email,
+		PasswordHash: newUserRequest.Password,
 	}
 
 	// Here you would typically add code to save the new user to a database
